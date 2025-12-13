@@ -41,16 +41,16 @@ export function CartPanel() {
 
           <div className="flex-1 overflow-y-auto p-6">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <img
-                  src={emptyCartImage}
+                  src="https://media1.tenor.com/m/F9i1_qz2QFQAAAAC/anime-sad.gif"
                   alt="empty cart"
-                  className="w-48 h-48 object-contain mb-6 opacity-80"
+                  className="w-64 h-64 object-contain mb-8 opacity-90 grayscale"
                 />
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className="text-base text-muted-foreground mb-2">
                   your cart is lonely
                 </p>
-                <p className="text-xs text-muted-foreground">add some drip</p>
+                <p className="text-sm text-muted-foreground">add some drip</p>
               </div>
             ) : (
               <div className="space-y-6">

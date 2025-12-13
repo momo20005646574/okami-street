@@ -6,17 +6,19 @@ import { AdminLoginModal } from './AdminLoginModal';
 import okamiLogo from '@/assets/okami-logo.png';
 
 export function Header() {
-  const { cart, setIsCartOpen, isAdmin } = useStore();
+  const { cart, setIsCartOpen, isAdmin, brandLogo } = useStore();
   const [showLogin, setShowLogin] = useState(false);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const logoSrc = brandLogo || okamiLogo;
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
         <div className="container flex items-center justify-between h-16 px-4">
           <Link to="/" className="flex items-center gap-3 border border-border p-2">
-            <img src={okamiLogo} alt="okami" className="h-8 w-8 invert" />
+            <img src={logoSrc} alt="okami" className="h-8 w-8 invert" />
             <span className="text-xs uppercase tracking-widest hidden sm:block">
               okami
             </span>

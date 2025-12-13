@@ -79,6 +79,7 @@ interface StoreContextType {
   orders: Order[];
   isAdmin: boolean;
   isCartOpen: boolean;
+  brandLogo: string | null;
   addToCart: (product: Product, size: string) => void;
   removeFromCart: (productId: string, size: string) => void;
   updateCartQuantity: (productId: string, size: string, quantity: number) => void;
@@ -92,6 +93,7 @@ interface StoreContextType {
   addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => void;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   getCartTotal: () => number;
+  setBrandLogo: (logo: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -120,6 +122,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
 
+  const [brandLogo, setBrandLogo] = useState<string | null>(() => {
+    return localStorage.getItem('okami-brand-logo');
+  });
+
   useEffect(() => {
     localStorage.setItem('okami-products', JSON.stringify(products));
   }, [products]);
@@ -135,6 +141,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('okami-admin', isAdmin.toString());
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (brandLogo) {
+      localStorage.setItem('okami-brand-logo', brandLogo);
+    } else {
+      localStorage.removeItem('okami-brand-logo');
+    }
+  }, [brandLogo]);
 
   const addToCart = (product: Product, size: string) => {
     setCart((prev) => {
@@ -241,6 +255,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         orders,
         isAdmin,
         isCartOpen,
+        brandLogo,
         addToCart,
         removeFromCart,
         updateCartQuantity,
@@ -254,6 +269,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         addOrder,
         updateOrderStatus,
         getCartTotal,
+        setBrandLogo,
       }}
     >
       {children}
