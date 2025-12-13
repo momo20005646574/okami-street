@@ -1,96 +1,81 @@
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/ibm-plex-mono/700.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 93%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 0%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 93%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 93%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 93%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --radius: 0px;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 0 0% 100%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Custom tokens */
+    --off-white: 0 0% 93%;
+    --pure-black: 0 0% 0%;
+    --pure-white: 0 0% 100%;
+    --grid-line: 0 0% 20%;
+    --discount: 0 0% 100%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
   }
 }
 
@@ -99,7 +84,179 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
+  html {
+    scroll-behavior: smooth;
   }
+
+  body {
+    @apply bg-background text-foreground font-mono antialiased;
+    font-feature-settings: "ss01", "ss02";
+    letter-spacing: 0.05em;
+  }
+
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+}
+
+@layer components {
+  .product-card {
+    @apply bg-card transition-transform duration-300 ease-out;
+  }
+
+  .product-card:hover {
+    @apply -translate-y-1;
+  }
+
+  .product-title {
+    @apply lowercase tracking-wider text-sm;
+  }
+
+  .product-title::before {
+    content: '"';
+  }
+
+  .product-title::after {
+    content: '"';
+  }
+
+  .underline-hover {
+    @apply relative;
+  }
+
+  .underline-hover::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-px bg-current transform scale-x-0 origin-right transition-transform duration-300 ease-out;
+  }
+
+  .underline-hover:hover::after {
+    @apply scale-x-100 origin-left;
+  }
+
+  .brutalist-border {
+    @apply border border-border;
+  }
+
+  .brutalist-btn {
+    @apply bg-primary text-primary-foreground px-6 py-3 uppercase tracking-widest text-xs font-medium transition-all duration-200;
+  }
+
+  .brutalist-btn:hover {
+    @apply bg-foreground text-background;
+  }
+
+  .brutalist-btn-outline {
+    @apply border border-primary bg-transparent text-foreground px-6 py-3 uppercase tracking-widest text-xs font-medium transition-all duration-200;
+  }
+
+  .brutalist-btn-outline:hover {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .size-btn {
+    @apply border border-border px-4 py-2 text-xs uppercase tracking-widest transition-all duration-200 bg-transparent text-foreground;
+  }
+
+  .size-btn:hover,
+  .size-btn.active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .size-btn:disabled {
+    @apply opacity-30 cursor-not-allowed;
+  }
+
+  .discount-badge {
+    @apply bg-primary text-primary-foreground px-2 py-1 text-xs uppercase tracking-widest font-medium;
+  }
+
+  .cart-panel {
+    @apply fixed top-0 right-0 h-full w-full max-w-md bg-background border-l border-border z-50 transform transition-transform duration-300 ease-out;
+  }
+
+  .admin-table {
+    @apply w-full border-collapse;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    @apply border border-border px-4 py-3 text-left text-xs uppercase tracking-wider;
+  }
+
+  .admin-table th {
+    @apply bg-secondary font-medium;
+  }
+
+  .form-input {
+    @apply w-full bg-transparent border border-border px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors duration-200 text-sm;
+  }
+
+  .form-select {
+    @apply w-full bg-background border border-border px-4 py-3 text-foreground focus:outline-none focus:border-primary transition-colors duration-200 text-sm appearance-none cursor-pointer;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out forwards;
+  }
+
+  .animate-slide-out-right {
+    animation: slide-out-right 0.3s ease-out forwards;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-7 { animation-delay: 0.35s; }
+  .stagger-8 { animation-delay: 0.4s; }
 }
