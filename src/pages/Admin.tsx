@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X } from 'lucide-react';
+import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { Product } from '@/types/store';
 
-type Tab = 'orders' | 'products';
+type Tab = 'orders' | 'products' | 'settings';
 
 const Admin = () => {
   const {
@@ -16,6 +16,8 @@ const Admin = () => {
     deleteProduct,
     updateProduct,
     addProduct,
+    brandLogo,
+    setBrandLogo,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('orders');
@@ -69,6 +71,17 @@ const Admin = () => {
             <Package size={14} />
             products ({products.length})
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === 'settings'
+                ? 'border-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Settings size={14} />
+            settings
+          </button>
         </div>
       </div>
 
@@ -89,10 +102,79 @@ const Admin = () => {
             setShowAddProduct={setShowAddProduct}
           />
         )}
+        {activeTab === 'settings' && (
+          <SettingsTab brandLogo={brandLogo} setBrandLogo={setBrandLogo} />
+        )}
       </main>
     </div>
   );
 };
+
+function SettingsTab({
+  brandLogo,
+  setBrandLogo,
+}: {
+  brandLogo: string | null;
+  setBrandLogo: (logo: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setBrandLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="max-w-md">
+      <h2 className="text-xs uppercase tracking-widest mb-6">brand settings</h2>
+      
+      <div className="border border-border p-6">
+        <label className="text-xs uppercase tracking-widest block mb-4">
+          brand logo / icon
+        </label>
+        
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 border border-border bg-secondary flex items-center justify-center">
+            {brandLogo ? (
+              <img src={brandLogo} alt="brand logo" className="w-12 h-12 object-contain invert" />
+            ) : (
+              <Image size={24} className="text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-2">
+              upload a new logo to replace the current one
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="brutalist-btn-outline text-xs flex items-center gap-2"
+            >
+              <Upload size={12} />
+              upload logo
+            </button>
+          </div>
+        </div>
+        
+        <p className="text-[10px] text-muted-foreground">
+          recommended: square image, 200x200px or larger
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function OrdersTab({
   orders,
@@ -319,9 +401,67 @@ function ProductModal({
     category: product?.category || 'tops',
     images: product?.images || [],
   });
+  
+  const [imageError, setImageError] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData((prev) => ({
+            ...prev,
+            images: [...prev.images, reader.result as string],
+          }));
+          setImageError(false);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newImages = [...formData.images];
+    const draggedImage = newImages[draggedIndex];
+    newImages.splice(draggedIndex, 1);
+    newImages.splice(index, 0, draggedImage);
+    
+    setFormData((prev) => ({ ...prev, images: newImages }));
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.images.length === 0) {
+      setImageError(true);
+      return;
+    }
+    
     const sizes = formData.sizes.split(',').map((s) => s.trim().toLowerCase());
     
     onSave({
@@ -332,7 +472,7 @@ function ProductModal({
       sizes,
       description: formData.description,
       category: formData.category as Product['category'],
-      images: formData.images.length > 0 ? formData.images : ['/placeholder.svg'],
+      images: formData.images,
     });
   };
 
@@ -352,6 +492,80 @@ function ProductModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Image Upload Section */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              images *
+            </label>
+            
+            {/* Image Grid */}
+            {formData.images.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {formData.images.map((img, index) => (
+                  <div
+                    key={index}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`relative group aspect-square bg-card border border-border cursor-move ${
+                      draggedIndex === index ? 'opacity-50' : ''
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`product ${index + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      <GripVertical size={14} className="text-muted-foreground" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="p-1 hover:text-destructive"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    {index === 0 && (
+                      <span className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-[8px] text-center py-0.5">
+                        main
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`brutalist-btn-outline w-full flex items-center justify-center gap-2 ${
+                imageError ? 'border-destructive text-destructive' : ''
+              }`}
+            >
+              <Upload size={14} />
+              upload images
+            </button>
+            {imageError && (
+              <p className="text-xs text-destructive mt-1">
+                at least one image is required
+              </p>
+            )}
+            <p className="text-[10px] text-muted-foreground mt-1">
+              drag to reorder · first image is main
+            </p>
+          </div>
+
           <div>
             <label className="text-xs uppercase tracking-widest block mb-2">
               title
