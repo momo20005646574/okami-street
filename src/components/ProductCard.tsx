@@ -23,7 +23,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <img
           src={product.images[0]}
           alt={product.title}
-          className="w-full h-full object-contain p-4 transition-transform duration-300 ease-out group-hover:-translate-y-1"
+          className="w-full h-full object-contain p-1 transition-transform duration-300 ease-out group-hover:-translate-y-1"
         />
 
         {product.stock === 0 && (
