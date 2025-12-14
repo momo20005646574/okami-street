@@ -17,9 +17,9 @@ export function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-40 bg-background border-b border-border">
         <div className="container flex items-center justify-between h-16 px-4">
-          <Link to="/" className="flex items-center gap-4 border border-border p-2">
-            <img src={logoSrc} alt="okami" className="h-12 w-12 object-contain" />
-            <span className="text-sm uppercase tracking-widest hidden sm:block font-medium">
+          <Link to="/" className="flex items-center gap-3 border border-border p-2">
+            <img src={logoSrc} alt="okami" className="h-8 w-8 invert" />
+            <span className="text-xs uppercase tracking-widest hidden sm:block">
               okami
             </span>
           </Link>
