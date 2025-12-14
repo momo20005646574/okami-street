@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image } from 'lucide-react';
+import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image, Calendar, Sparkles } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
-import { Product } from '@/types/store';
+import { Product, Drop } from '@/types/store';
 
-type Tab = 'orders' | 'products' | 'settings';
+type Tab = 'orders' | 'products' | 'settings' | 'drops';
 
 const Admin = () => {
   const {
@@ -18,6 +18,8 @@ const Admin = () => {
     addProduct,
     brandLogo,
     setBrandLogo,
+    activeDrop,
+    setActiveDrop,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('orders');
@@ -47,11 +49,11 @@ const Admin = () => {
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-border">
+      <div className="border-b border-border overflow-x-auto">
         <div className="container px-4 flex">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors ${
+            className={`px-4 sm:px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'orders'
                 ? 'border-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -62,7 +64,7 @@ const Admin = () => {
           </button>
           <button
             onClick={() => setActiveTab('products')}
-            className={`px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors ${
+            className={`px-4 sm:px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'products'
                 ? 'border-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -72,8 +74,19 @@ const Admin = () => {
             products ({products.length})
           </button>
           <button
+            onClick={() => setActiveTab('drops')}
+            className={`px-4 sm:px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === 'drops'
+                ? 'border-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Sparkles size={14} />
+            drops
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
-            className={`px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors ${
+            className={`px-4 sm:px-6 py-4 text-xs uppercase tracking-widest flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'settings'
                 ? 'border-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -102,6 +115,13 @@ const Admin = () => {
             setShowAddProduct={setShowAddProduct}
           />
         )}
+        {activeTab === 'drops' && (
+          <DropsTab
+            products={products}
+            activeDrop={activeDrop}
+            setActiveDrop={setActiveDrop}
+          />
+        )}
         {activeTab === 'settings' && (
           <SettingsTab brandLogo={brandLogo} setBrandLogo={setBrandLogo} />
         )}
@@ -109,6 +129,379 @@ const Admin = () => {
     </div>
   );
 };
+
+function DropsTab({
+  products,
+  activeDrop,
+  setActiveDrop,
+}: {
+  products: Product[];
+  activeDrop: Drop | null;
+  setActiveDrop: (drop: Drop | null) => void;
+}) {
+  const [showCreateDrop, setShowCreateDrop] = useState(false);
+  const [editingDrop, setEditingDrop] = useState<Drop | null>(null);
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xs uppercase tracking-widest">drop releases</h2>
+        {!activeDrop && (
+          <button
+            onClick={() => setShowCreateDrop(true)}
+            className="brutalist-btn flex items-center gap-2"
+          >
+            <Plus size={14} />
+            create drop
+          </button>
+        )}
+      </div>
+
+      {activeDrop ? (
+        <div className="border border-border p-6 max-w-2xl">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h3 className="text-sm uppercase tracking-widest mb-2">{activeDrop.name}</h3>
+              <p className="text-xs text-muted-foreground">
+                releases: {new Date(activeDrop.releaseDate).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditingDrop(activeDrop)}
+                className="brutalist-btn-outline text-xs py-1 px-3"
+              >
+                edit
+              </button>
+              <button
+                onClick={() => setActiveDrop(null)}
+                className="brutalist-btn-outline text-xs py-1 px-3"
+              >
+                cancel drop
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-widest mb-2">assigned products ({activeDrop.productIds.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {activeDrop.productIds.map((id) => {
+                  const product = products.find((p) => p.id === id);
+                  return product ? (
+                    <span key={id} className="text-xs border border-border px-2 py-1">
+                      "{product.title}"
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-widest mb-2">lookbook images ({activeDrop.lookbookImages.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {activeDrop.lookbookImages.map((img, idx) => (
+                  <div key={idx} className="w-16 h-16 bg-card">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {activeDrop.backgroundImage && (
+              <div>
+                <p className="text-xs uppercase tracking-widest mb-2">background image</p>
+                <div className="w-32 h-20 bg-card">
+                  <img src={activeDrop.backgroundImage} alt="" className="w-full h-full object-cover" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-16 border border-border">
+          <Calendar size={32} className="mx-auto mb-4 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground mb-4">no active drop</p>
+          <button
+            onClick={() => setShowCreateDrop(true)}
+            className="brutalist-btn-outline text-xs"
+          >
+            create your first drop
+          </button>
+        </div>
+      )}
+
+      {(showCreateDrop || editingDrop) && (
+        <DropModal
+          drop={editingDrop || undefined}
+          products={products}
+          onSave={(drop) => {
+            setActiveDrop(drop);
+            setShowCreateDrop(false);
+            setEditingDrop(null);
+          }}
+          onClose={() => {
+            setShowCreateDrop(false);
+            setEditingDrop(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function DropModal({
+  drop,
+  products,
+  onSave,
+  onClose,
+}: {
+  drop?: Drop;
+  products: Product[];
+  onSave: (drop: Drop) => void;
+  onClose: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    name: drop?.name || '',
+    releaseDate: drop?.releaseDate
+      ? new Date(drop.releaseDate).toISOString().slice(0, 16)
+      : '',
+    productIds: drop?.productIds || [],
+    lookbookImages: drop?.lookbookImages || [],
+    backgroundImage: drop?.backgroundImage || '',
+  });
+
+  const lookbookInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLookbookUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData((prev) => ({
+            ...prev,
+            lookbookImages: [...prev.lookbookImages, reader.result as string],
+          }));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((prev) => ({
+          ...prev,
+          backgroundImage: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeLookbookImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      lookbookImages: prev.lookbookImages.filter((_, i) => i !== index),
+    }));
+  };
+
+  const toggleProduct = (productId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      productIds: prev.productIds.includes(productId)
+        ? prev.productIds.filter((id) => id !== productId)
+        : [...prev.productIds, productId],
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.releaseDate) return;
+
+    onSave({
+      id: drop?.id || Date.now().toString(),
+      name: formData.name,
+      releaseDate: new Date(formData.releaseDate),
+      productIds: formData.productIds,
+      lookbookImages: formData.lookbookImages,
+      backgroundImage: formData.backgroundImage || undefined,
+      isActive: true,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4">
+      <div className="animate-fade-in border border-border bg-background p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xs uppercase tracking-widest">
+            {drop ? 'edit drop' : 'create drop'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Drop Name */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              drop name *
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="form-input"
+              placeholder="e.g. winter collection 2024"
+              required
+            />
+          </div>
+
+          {/* Release Date */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              release date & time *
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.releaseDate}
+              onChange={(e) => setFormData({ ...formData, releaseDate: e.target.value })}
+              className="form-input"
+              required
+            />
+          </div>
+
+          {/* Products Selection */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              assign products (hidden until release)
+            </label>
+            <div className="border border-border p-4 max-h-48 overflow-y-auto space-y-2">
+              {products.map((product) => (
+                <label
+                  key={product.id}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-secondary p-2 -m-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.productIds.includes(product.id)}
+                    onChange={() => toggleProduct(product.id)}
+                    className="w-4 h-4 accent-foreground"
+                  />
+                  <div className="w-8 h-8 bg-card flex-shrink-0">
+                    <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-xs">"{product.title}"</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Lookbook Images */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              lookbook images
+            </label>
+            <div className="border border-border p-4">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {formData.lookbookImages.map((img, idx) => (
+                  <div key={idx} className="relative w-20 h-20 bg-card">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeLookbookImage(idx)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-background border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <input
+                ref={lookbookInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleLookbookUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => lookbookInputRef.current?.click()}
+                className="brutalist-btn-outline text-xs flex items-center gap-2"
+              >
+                <Upload size={12} />
+                upload images
+              </button>
+            </div>
+          </div>
+
+          {/* Background Image */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">
+              custom background (optional)
+            </label>
+            <div className="border border-border p-4">
+              {formData.backgroundImage ? (
+                <div className="relative w-full h-32 mb-4">
+                  <img src={formData.backgroundImage} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, backgroundImage: '' })}
+                    className="absolute top-2 right-2 w-6 h-6 bg-background border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mb-4">
+                  default: black background
+                </p>
+              )}
+              <input
+                ref={backgroundInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBackgroundUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => backgroundInputRef.current?.click()}
+                className="brutalist-btn-outline text-xs flex items-center gap-2"
+              >
+                <Upload size={12} />
+                upload background
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button type="submit" className="brutalist-btn flex-1">
+              {drop ? 'update drop' : 'create drop'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="brutalist-btn-outline flex-1"
+            >
+              cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function SettingsTab({
   brandLogo,
@@ -142,7 +535,7 @@ function SettingsTab({
         <div className="flex items-center gap-4 mb-4">
           <div className="w-16 h-16 border border-border bg-secondary flex items-center justify-center">
             {brandLogo ? (
-              <img src={brandLogo} alt="brand logo" className="w-12 h-12 object-contain invert" />
+              <img src={brandLogo} alt="brand logo" className="w-full h-full object-contain" />
             ) : (
               <Image size={24} className="text-muted-foreground" />
             )}
@@ -321,7 +714,7 @@ function ProductsTab({
                     <img
                       src={product.images[0]}
                       alt={product.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 </td>
@@ -498,45 +891,43 @@ function ProductModal({
               images *
             </label>
             
-            {/* Image Grid */}
-            {formData.images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {formData.images.map((img, index) => (
-                  <div
-                    key={index}
-                    draggable
-                    onDragStart={() => handleDragStart(index)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragEnd={handleDragEnd}
-                    className={`relative group aspect-square bg-card border border-border cursor-move ${
-                      draggedIndex === index ? 'opacity-50' : ''
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`product ${index + 1}`}
-                      className="w-full h-full object-contain"
-                    />
-                    <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                      <GripVertical size={14} className="text-muted-foreground" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="p-1 hover:text-destructive"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    {index === 0 && (
-                      <span className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground text-[8px] text-center py-0.5">
-                        main
-                      </span>
-                    )}
+            {/* Image Preview Grid */}
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {formData.images.map((img, index) => (
+                <div
+                  key={index}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`relative aspect-square border border-border bg-card cursor-move group ${
+                    draggedIndex === index ? 'opacity-50' : ''
+                  }`}
+                >
+                  <img
+                    src={img}
+                    alt={`Product ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                    <GripVertical size={12} className="text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="p-1 hover:text-destructive"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-            
+                  {index === 0 && (
+                    <span className="absolute bottom-0 left-0 right-0 text-[8px] text-center bg-background py-0.5 uppercase">
+                      main
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
             {/* Upload Button */}
             <input
               ref={fileInputRef}
@@ -549,26 +940,28 @@ function ProductModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`brutalist-btn-outline w-full flex items-center justify-center gap-2 ${
-                imageError ? 'border-destructive text-destructive' : ''
-              }`}
+              className={`w-full border border-dashed ${
+                imageError ? 'border-destructive' : 'border-border'
+              } p-4 text-center hover:bg-secondary transition-colors`}
             >
-              <Upload size={14} />
-              upload images
+              <Upload size={16} className="mx-auto mb-2" />
+              <span className="text-xs uppercase tracking-widest">
+                upload images
+              </span>
             </button>
             {imageError && (
               <p className="text-xs text-destructive mt-1">
                 at least one image is required
               </p>
             )}
-            <p className="text-[10px] text-muted-foreground mt-1">
-              drag to reorder · first image is main
+            <p className="text-[10px] text-muted-foreground mt-2">
+              drag to reorder · first image is the main thumbnail
             </p>
           </div>
 
           <div>
             <label className="text-xs uppercase tracking-widest block mb-2">
-              title
+              title *
             </label>
             <input
               type="text"
@@ -584,7 +977,7 @@ function ProductModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs uppercase tracking-widest block mb-2">
-                price (da)
+                price (da) *
               </label>
               <input
                 type="number"
@@ -610,24 +1003,42 @@ function ProductModal({
                   })
                 }
                 className="form-input"
-                placeholder="leave empty if no discount"
               />
             </div>
           </div>
 
-          <div>
-            <label className="text-xs uppercase tracking-widest block mb-2">
-              stock
-            </label>
-            <input
-              type="number"
-              value={formData.stock}
-              onChange={(e) =>
-                setFormData({ ...formData, stock: Number(e.target.value) })
-              }
-              className="form-input"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">
+                stock *
+              </label>
+              <input
+                type="number"
+                value={formData.stock}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock: Number(e.target.value) })
+                }
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">
+                category *
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value as 'tops' | 'bottoms' | 'outerwear' | 'accessories' })
+                }
+                className="form-select"
+              >
+                <option value="tops">tops</option>
+                <option value="bottoms">bottoms</option>
+                <option value="outerwear">outerwear</option>
+                <option value="accessories">accessories</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -647,24 +1058,6 @@ function ProductModal({
 
           <div>
             <label className="text-xs uppercase tracking-widest block mb-2">
-              category
-            </label>
-          <select
-            value={formData.category}
-            onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value as Product['category'] })
-              }
-              className="form-select"
-            >
-              <option value="tops">tops</option>
-              <option value="bottoms">bottoms</option>
-              <option value="outerwear">outerwear</option>
-              <option value="accessories">accessories</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-widest block mb-2">
               description
             </label>
             <textarea
@@ -676,9 +1069,18 @@ function ProductModal({
             />
           </div>
 
-          <button type="submit" className="brutalist-btn w-full">
-            {product ? 'save changes' : 'add product'}
-          </button>
+          <div className="flex gap-4 pt-4">
+            <button type="submit" className="brutalist-btn flex-1">
+              {product ? 'update' : 'add product'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="brutalist-btn-outline flex-1"
+            >
+              cancel
+            </button>
+          </div>
         </form>
       </div>
     </div>
