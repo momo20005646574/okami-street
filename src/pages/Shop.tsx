@@ -4,7 +4,8 @@ import { Header } from '@/components/Header';
 import { CartPanel } from '@/components/CartPanel';
 
 const Shop = () => {
-  const { products } = useStore();
+  const { getVisibleProducts } = useStore();
+  const products = getVisibleProducts();
 
   return (
     <div className="min-h-screen bg-background">

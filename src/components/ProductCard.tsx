@@ -23,7 +23,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <img
           src={product.images[0]}
           alt={product.title}
-          className="w-full h-full object-contain p-1 transition-transform duration-300 ease-out group-hover:-translate-y-1"
+          className="w-full h-full object-cover transition-transform duration-300 ease-out group-hover:-translate-y-1"
         />
 
         {product.stock === 0 && (
@@ -35,6 +35,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         {discountPercent > 0 && product.stock > 0 && (
           <div className="absolute top-0 left-0 bg-black text-white px-2 py-1 text-xs uppercase tracking-widest font-medium">
             -{discountPercent}%
+          </div>
+        )}
+
+        {product.isNew && (
+          <div className="absolute top-0 right-0 bg-foreground text-background px-2 py-1 text-xs uppercase tracking-widest font-medium">
+            new
           </div>
         )}
       </div>

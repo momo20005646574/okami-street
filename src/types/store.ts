@@ -8,6 +8,8 @@ export interface Product {
   stock: number;
   category: 'tops' | 'bottoms' | 'outerwear' | 'accessories';
   description?: string;
+  dropId?: string;
+  isNew?: boolean;
 }
 
 export interface CartItem {
@@ -26,6 +28,16 @@ export interface Order {
   total: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   createdAt: Date;
+}
+
+export interface Drop {
+  id: string;
+  name: string;
+  releaseDate: Date;
+  lookbookImages: string[];
+  backgroundImage?: string;
+  isActive: boolean;
+  productIds: string[];
 }
 
 export const WILAYAS = [

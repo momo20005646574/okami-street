@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, Order } from '@/types/store';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Product, CartItem, Order, Drop } from '@/types/store';
 
 import hoodieDragon from '@/assets/products/hoodie-dragon.png';
 import pantsKanji from '@/assets/products/pants-kanji.png';
@@ -80,6 +80,7 @@ interface StoreContextType {
   isAdmin: boolean;
   isCartOpen: boolean;
   brandLogo: string | null;
+  activeDrop: Drop | null;
   addToCart: (product: Product, size: string) => void;
   removeFromCart: (productId: string, size: string) => void;
   updateCartQuantity: (productId: string, size: string, quantity: number) => void;
@@ -94,6 +95,9 @@ interface StoreContextType {
   updateOrderStatus: (id: string, status: Order['status']) => void;
   getCartTotal: () => number;
   setBrandLogo: (logo: string) => void;
+  getVisibleProducts: () => Product[];
+  setActiveDrop: (drop: Drop | null) => void;
+  completeDrop: () => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -126,6 +130,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return localStorage.getItem('okami-brand-logo');
   });
 
+  const [activeDrop, setActiveDrop] = useState<Drop | null>(() => {
+    const saved = localStorage.getItem('okami-active-drop');
+    if (saved) {
+      const drop = JSON.parse(saved);
+      // Convert date string back to Date object
+      drop.releaseDate = new Date(drop.releaseDate);
+      return drop;
+    }
+    return null;
+  });
+
   useEffect(() => {
     localStorage.setItem('okami-products', JSON.stringify(products));
   }, [products]);
@@ -149,6 +164,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('okami-brand-logo');
     }
   }, [brandLogo]);
+
+  useEffect(() => {
+    if (activeDrop) {
+      localStorage.setItem('okami-active-drop', JSON.stringify(activeDrop));
+    } else {
+      localStorage.removeItem('okami-active-drop');
+    }
+  }, [activeDrop]);
 
   const addToCart = (product: Product, size: string) => {
     setCart((prev) => {
@@ -247,6 +270,36 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const getVisibleProducts = useCallback(() => {
+    if (!activeDrop || !activeDrop.isActive) {
+      return products;
+    }
+
+    const now = new Date();
+    const releaseDate = new Date(activeDrop.releaseDate);
+
+    // If countdown has passed, show all products
+    if (now >= releaseDate) {
+      return products;
+    }
+
+    // During active drop, hide products assigned to this drop
+    return products.filter((p) => !activeDrop.productIds.includes(p.id));
+  }, [products, activeDrop]);
+
+  const completeDrop = useCallback(() => {
+    if (activeDrop) {
+      // Mark drop products as new
+      setProducts((prev) =>
+        prev.map((p) =>
+          activeDrop.productIds.includes(p.id) ? { ...p, isNew: true } : p
+        )
+      );
+      // Deactivate the drop
+      setActiveDrop(null);
+    }
+  }, [activeDrop]);
+
   return (
     <StoreContext.Provider
       value={{
@@ -256,6 +309,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         isAdmin,
         isCartOpen,
         brandLogo,
+        activeDrop,
         addToCart,
         removeFromCart,
         updateCartQuantity,
@@ -270,6 +324,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         updateOrderStatus,
         getCartTotal,
         setBrandLogo,
+        getVisibleProducts,
+        setActiveDrop,
+        completeDrop,
       }}
     >
       {children}
