@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image, Calendar, Sparkles } from 'lucide-react';
+import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image, Calendar, Sparkles, Flame } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { Product, Drop } from '@/types/store';
 
@@ -269,6 +269,7 @@ function DropModal({
     productIds: drop?.productIds || [],
     lookbookImages: drop?.lookbookImages || [],
     backgroundImage: drop?.backgroundImage || '',
+    globalFireEffect: drop?.globalFireEffect || false,
   });
 
   const lookbookInputRef = useRef<HTMLInputElement>(null);
@@ -332,6 +333,7 @@ function DropModal({
       lookbookImages: formData.lookbookImages,
       backgroundImage: formData.backgroundImage || undefined,
       isActive: true,
+      globalFireEffect: formData.globalFireEffect,
     });
   };
 
@@ -483,6 +485,22 @@ function DropModal({
                 upload background
               </button>
             </div>
+          </div>
+
+          {/* Global Fire Effect Toggle */}
+          <div className="border border-border p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.globalFireEffect}
+                onChange={(e) => setFormData({ ...formData, globalFireEffect: e.target.checked })}
+                className="w-4 h-4 accent-foreground"
+              />
+              <div>
+                <span className="text-xs uppercase tracking-widest block">enable fire effect for all drop products</span>
+                <span className="text-[10px] text-muted-foreground">adds animated glowing fire text effect to product titles</span>
+              </div>
+            </label>
           </div>
 
           <div className="flex gap-4 pt-4">
@@ -793,6 +811,7 @@ function ProductModal({
     description: product?.description || '',
     category: product?.category || 'tops',
     images: product?.images || [],
+    hasFireEffect: product?.hasFireEffect || false,
   });
   
   const [imageError, setImageError] = useState(false);
@@ -866,6 +885,7 @@ function ProductModal({
       description: formData.description,
       category: formData.category as Product['category'],
       images: formData.images,
+      hasFireEffect: formData.hasFireEffect,
     });
   };
 
@@ -1067,6 +1087,22 @@ function ProductModal({
               }
               className="form-input min-h-[80px] resize-none"
             />
+          </div>
+
+          {/* Fire Effect Toggle */}
+          <div className="border border-border p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.hasFireEffect}
+                onChange={(e) => setFormData({ ...formData, hasFireEffect: e.target.checked })}
+                className="w-4 h-4 accent-foreground"
+              />
+              <div>
+                <span className="text-xs uppercase tracking-widest block">fire title effect</span>
+                <span className="text-[10px] text-muted-foreground">animated glowing fire text on product title</span>
+              </div>
+            </label>
           </div>
 
           <div className="flex gap-4 pt-4">

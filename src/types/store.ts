@@ -10,6 +10,7 @@ export interface Product {
   description?: string;
   dropId?: string;
   isNew?: boolean;
+  hasFireEffect?: boolean;
 }
 
 export interface CartItem {
@@ -38,6 +39,7 @@ export interface Drop {
   backgroundImage?: string;
   isActive: boolean;
   productIds: string[];
+  globalFireEffect?: boolean;
 }
 
 export const WILAYAS = [
