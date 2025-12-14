@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Product } from '@/types/store';
+import { useStore } from '@/context/StoreContext';
 
 interface ProductCardProps {
   product: Product;
@@ -7,11 +8,17 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
+  const { activeDrop } = useStore();
+  
   const discountPercent = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100
       )
     : 0;
+
+  // Check if fire effect should be applied
+  const hasFireEffect = product.hasFireEffect || 
+    (activeDrop?.globalFireEffect && activeDrop.productIds.includes(product.id));
 
   return (
     <Link
@@ -46,7 +53,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       </div>
 
       <div className="p-3 bg-white">
-        <h3 className="text-black text-xs lowercase tracking-wider underline-hover">
+        <h3 className={`text-black text-xs lowercase tracking-wider underline-hover ${hasFireEffect ? 'fire-text' : ''}`}>
           <span>"{product.title}"</span>
         </h3>
         <div className="flex items-center gap-2 mt-2">
