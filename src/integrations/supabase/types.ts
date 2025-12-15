@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_settings: {
+        Row: {
+          created_at: string
+          id: string
+          password_hash: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          password_hash: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          password_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      drops: {
+        Row: {
+          background_type: string | null
+          background_url: string | null
+          created_at: string
+          global_fire_effect: boolean | null
+          id: string
+          is_active: boolean
+          lookbook_images: string[]
+          name: string
+          release_date: string
+          updated_at: string
+        }
+        Insert: {
+          background_type?: string | null
+          background_url?: string | null
+          created_at?: string
+          global_fire_effect?: boolean | null
+          id?: string
+          is_active?: boolean
+          lookbook_images?: string[]
+          name: string
+          release_date: string
+          updated_at?: string
+        }
+        Update: {
+          background_type?: string | null
+          background_url?: string | null
+          created_at?: string
+          global_fire_effect?: boolean | null
+          id?: string
+          is_active?: boolean
+          lookbook_images?: string[]
+          name?: string
+          release_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_name: string
+          delivery_type: string
+          id: string
+          items: Json
+          phone: string
+          status: string
+          total: number
+          wilaya: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          delivery_type: string
+          id?: string
+          items: Json
+          phone: string
+          status?: string
+          total: number
+          wilaya: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          delivery_type?: string
+          id?: string
+          items?: Json
+          phone?: string
+          status?: string
+          total?: number
+          wilaya?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          drop_id: string | null
+          has_fire_effect: boolean | null
+          id: string
+          images: string[]
+          is_new: boolean | null
+          original_price: number | null
+          price: number
+          sizes: string[]
+          sold_out_at: string | null
+          stock: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          drop_id?: string | null
+          has_fire_effect?: boolean | null
+          id?: string
+          images?: string[]
+          is_new?: boolean | null
+          original_price?: number | null
+          price: number
+          sizes?: string[]
+          sold_out_at?: string | null
+          stock?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          drop_id?: string | null
+          has_fire_effect?: boolean | null
+          id?: string
+          images?: string[]
+          is_new?: boolean | null
+          original_price?: number | null
+          price?: number
+          sizes?: string[]
+          sold_out_at?: string | null
+          stock?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_drop_id_fkey"
+            columns: ["drop_id"]
+            isOneToOne: false
+            referencedRelation: "drops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image, Calendar, Sparkles, Flame } from 'lucide-react';
+import { Package, ShoppingCart, LogOut, Trash2, Edit2, Plus, Phone, X, Upload, GripVertical, Settings, Image, Calendar, Sparkles, Flame, Lock, Video } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { Product, Drop } from '@/types/store';
+import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
+import { toast } from 'sonner';
 
 type Tab = 'orders' | 'products' | 'settings' | 'drops';
 
@@ -19,16 +21,32 @@ const Admin = () => {
     brandLogo,
     setBrandLogo,
     activeDrop,
-    setActiveDrop,
+    drops,
+    createDrop,
+    updateDrop,
+    cancelDrop,
+    changePassword,
+    uploadMedia,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<Tab>('orders');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; productId: string | null }>({
+    show: false,
+    productId: null,
+  });
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
+
+  const handleDeleteProduct = async () => {
+    if (deleteConfirm.productId) {
+      await deleteProduct(deleteConfirm.productId);
+      setDeleteConfirm({ show: false, productId: null });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,26 +124,44 @@ const Admin = () => {
         {activeTab === 'products' && (
           <ProductsTab
             products={products}
-            deleteProduct={deleteProduct}
+            onDeleteProduct={(id) => setDeleteConfirm({ show: true, productId: id })}
             updateProduct={updateProduct}
             addProduct={addProduct}
             editingProduct={editingProduct}
             setEditingProduct={setEditingProduct}
             showAddProduct={showAddProduct}
             setShowAddProduct={setShowAddProduct}
+            uploadMedia={uploadMedia}
+            activeDrop={activeDrop}
           />
         )}
         {activeTab === 'drops' && (
           <DropsTab
             products={products}
             activeDrop={activeDrop}
-            setActiveDrop={setActiveDrop}
+            drops={drops}
+            createDrop={createDrop}
+            updateDrop={updateDrop}
+            cancelDrop={cancelDrop}
+            addProduct={addProduct}
+            uploadMedia={uploadMedia}
           />
         )}
         {activeTab === 'settings' && (
-          <SettingsTab brandLogo={brandLogo} setBrandLogo={setBrandLogo} />
+          <SettingsTab 
+            brandLogo={brandLogo} 
+            setBrandLogo={setBrandLogo}
+            changePassword={changePassword}
+          />
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteConfirm.show}
+        onClose={() => setDeleteConfirm({ show: false, productId: null })}
+        onConfirm={handleDeleteProduct}
+      />
     </div>
   );
 };
@@ -133,14 +169,27 @@ const Admin = () => {
 function DropsTab({
   products,
   activeDrop,
-  setActiveDrop,
+  drops,
+  createDrop,
+  updateDrop,
+  cancelDrop,
+  addProduct,
+  uploadMedia,
 }: {
   products: Product[];
-  activeDrop: Drop | null;
-  setActiveDrop: (drop: Drop | null) => void;
+  activeDrop: (Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) | null;
+  drops: (Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' })[];
+  createDrop: (drop: Omit<Drop, 'id' | 'isActive'> & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) => Promise<(Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) | null>;
+  updateDrop: (id: string, updates: Partial<Drop> & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) => Promise<void>;
+  cancelDrop: (id: string) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  uploadMedia: (file: File, folder?: string) => Promise<string | null>;
 }) {
   const [showCreateDrop, setShowCreateDrop] = useState(false);
-  const [editingDrop, setEditingDrop] = useState<Drop | null>(null);
+  const [editingDrop, setEditingDrop] = useState<(Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) | null>(null);
+
+  // Get products assigned to active drop
+  const dropProducts = activeDrop ? products.filter(p => p.dropId === activeDrop.id) : [];
 
   return (
     <div>
@@ -174,7 +223,7 @@ function DropsTab({
                 edit
               </button>
               <button
-                onClick={() => setActiveDrop(null)}
+                onClick={() => cancelDrop(activeDrop.id)}
                 className="brutalist-btn-outline text-xs py-1 px-3"
               >
                 cancel drop
@@ -184,16 +233,16 @@ function DropsTab({
 
           <div className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-widest mb-2">assigned products ({activeDrop.productIds.length})</p>
+              <p className="text-xs uppercase tracking-widest mb-2">drop products ({dropProducts.length})</p>
               <div className="flex flex-wrap gap-2">
-                {activeDrop.productIds.map((id) => {
-                  const product = products.find((p) => p.id === id);
-                  return product ? (
-                    <span key={id} className="text-xs border border-border px-2 py-1">
-                      "{product.title}"
-                    </span>
-                  ) : null;
-                })}
+                {dropProducts.map((product) => (
+                  <span key={product.id} className="text-xs border border-border px-2 py-1">
+                    "{product.title}"
+                  </span>
+                ))}
+                {dropProducts.length === 0 && (
+                  <span className="text-xs text-muted-foreground">no products yet - add products in the drop modal</span>
+                )}
               </div>
             </div>
 
@@ -208,11 +257,15 @@ function DropsTab({
               </div>
             </div>
 
-            {activeDrop.backgroundImage && (
+            {activeDrop.backgroundUrl && (
               <div>
-                <p className="text-xs uppercase tracking-widest mb-2">background image</p>
-                <div className="w-32 h-20 bg-card">
-                  <img src={activeDrop.backgroundImage} alt="" className="w-full h-full object-cover" />
+                <p className="text-xs uppercase tracking-widest mb-2">background ({activeDrop.backgroundType})</p>
+                <div className="w-32 h-20 bg-card overflow-hidden">
+                  {activeDrop.backgroundType === 'video' ? (
+                    <video src={activeDrop.backgroundUrl} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <img src={activeDrop.backgroundUrl} alt="" className="w-full h-full object-cover" />
+                  )}
                 </div>
               </div>
             )}
@@ -234,9 +287,18 @@ function DropsTab({
       {(showCreateDrop || editingDrop) && (
         <DropModal
           drop={editingDrop || undefined}
-          products={products}
-          onSave={(drop) => {
-            setActiveDrop(drop);
+          onSave={async (dropData, newProducts) => {
+            if (editingDrop) {
+              await updateDrop(editingDrop.id, dropData);
+            } else {
+              const newDrop = await createDrop(dropData);
+              // Add new products with the drop ID
+              if (newDrop && newProducts.length > 0) {
+                for (const product of newProducts) {
+                  await addProduct({ ...product, dropId: newDrop.id });
+                }
+              }
+            }
             setShowCreateDrop(false);
             setEditingDrop(null);
           }}
@@ -244,6 +306,7 @@ function DropsTab({
             setShowCreateDrop(false);
             setEditingDrop(null);
           }}
+          uploadMedia={uploadMedia}
         />
       )}
     </div>
@@ -252,56 +315,69 @@ function DropsTab({
 
 function DropModal({
   drop,
-  products,
   onSave,
   onClose,
+  uploadMedia,
 }: {
-  drop?: Drop;
-  products: Product[];
-  onSave: (drop: Drop) => void;
+  drop?: Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' };
+  onSave: (drop: Omit<Drop, 'id' | 'isActive'> & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }, newProducts: Omit<Product, 'id'>[]) => Promise<void>;
   onClose: () => void;
+  uploadMedia: (file: File, folder?: string) => Promise<string | null>;
 }) {
   const [formData, setFormData] = useState({
     name: drop?.name || '',
     releaseDate: drop?.releaseDate
       ? new Date(drop.releaseDate).toISOString().slice(0, 16)
       : '',
-    productIds: drop?.productIds || [],
     lookbookImages: drop?.lookbookImages || [],
-    backgroundImage: drop?.backgroundImage || '',
+    backgroundUrl: drop?.backgroundUrl || '',
+    backgroundType: drop?.backgroundType || 'image' as 'image' | 'gif' | 'video',
     globalFireEffect: drop?.globalFireEffect || false,
   });
+
+  const [newProducts, setNewProducts] = useState<Omit<Product, 'id'>[]>([]);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const lookbookInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
-  const handleLookbookUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLookbookUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
+      setUploading(true);
+      for (const file of Array.from(files)) {
+        const url = await uploadMedia(file, 'lookbook');
+        if (url) {
           setFormData((prev) => ({
             ...prev,
-            lookbookImages: [...prev.lookbookImages, reader.result as string],
+            lookbookImages: [...prev.lookbookImages, url],
           }));
-        };
-        reader.readAsDataURL(file);
-      });
+        }
+      }
+      setUploading(false);
     }
   };
 
-  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
+      setUploading(true);
+      const url = await uploadMedia(file, 'backgrounds');
+      if (url) {
+        let bgType: 'image' | 'gif' | 'video' = 'image';
+        if (file.type.startsWith('video/')) {
+          bgType = 'video';
+        } else if (file.name.toLowerCase().endsWith('.gif')) {
+          bgType = 'gif';
+        }
         setFormData((prev) => ({
           ...prev,
-          backgroundImage: reader.result as string,
+          backgroundUrl: url,
+          backgroundType: bgType,
         }));
-      };
-      reader.readAsDataURL(file);
+      }
+      setUploading(false);
     }
   };
 
@@ -312,29 +388,20 @@ function DropModal({
     }));
   };
 
-  const toggleProduct = (productId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      productIds: prev.productIds.includes(productId)
-        ? prev.productIds.filter((id) => id !== productId)
-        : [...prev.productIds, productId],
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.releaseDate) return;
 
-    onSave({
-      id: drop?.id || Date.now().toString(),
+    await onSave({
       name: formData.name,
       releaseDate: new Date(formData.releaseDate),
-      productIds: formData.productIds,
+      productIds: [],
       lookbookImages: formData.lookbookImages,
-      backgroundImage: formData.backgroundImage || undefined,
-      isActive: true,
+      backgroundImage: formData.backgroundUrl || undefined,
+      backgroundUrl: formData.backgroundUrl || undefined,
+      backgroundType: formData.backgroundType,
       globalFireEffect: formData.globalFireEffect,
-    });
+    }, newProducts);
   };
 
   return (
@@ -382,31 +449,40 @@ function DropModal({
             />
           </div>
 
-          {/* Products Selection */}
-          <div>
-            <label className="text-xs uppercase tracking-widest block mb-2">
-              assign products (hidden until release)
-            </label>
-            <div className="border border-border p-4 max-h-48 overflow-y-auto space-y-2">
-              {products.map((product) => (
-                <label
-                  key={product.id}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-secondary p-2 -m-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.productIds.includes(product.id)}
-                    onChange={() => toggleProduct(product.id)}
-                    className="w-4 h-4 accent-foreground"
-                  />
-                  <div className="w-8 h-8 bg-card flex-shrink-0">
-                    <img src={product.images[0]} alt="" className="w-full h-full object-cover" />
+          {/* New Products Section (only for creating new drops) */}
+          {!drop && (
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">
+                drop products (hidden until release)
+              </label>
+              <div className="border border-border p-4">
+                {newProducts.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {newProducts.map((product, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 border border-border">
+                        <span className="text-xs">"{product.title}" - {product.price.toLocaleString()} da</span>
+                        <button
+                          type="button"
+                          onClick={() => setNewProducts(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-xs">"{product.title}"</span>
-                </label>
-              ))}
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowAddProductModal(true)}
+                  className="brutalist-btn-outline text-xs flex items-center gap-2"
+                >
+                  <Plus size={12} />
+                  add product to drop
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Lookbook Images */}
           <div>
@@ -439,30 +515,38 @@ function DropModal({
               <button
                 type="button"
                 onClick={() => lookbookInputRef.current?.click()}
+                disabled={uploading}
                 className="brutalist-btn-outline text-xs flex items-center gap-2"
               >
                 <Upload size={12} />
-                upload images
+                {uploading ? 'uploading...' : 'upload images'}
               </button>
             </div>
           </div>
 
-          {/* Background Image */}
+          {/* Background Media */}
           <div>
             <label className="text-xs uppercase tracking-widest block mb-2">
-              custom background (optional)
+              custom background (image, gif, or video)
             </label>
             <div className="border border-border p-4">
-              {formData.backgroundImage ? (
+              {formData.backgroundUrl ? (
                 <div className="relative w-full h-32 mb-4">
-                  <img src={formData.backgroundImage} alt="" className="w-full h-full object-cover" />
+                  {formData.backgroundType === 'video' ? (
+                    <video src={formData.backgroundUrl} className="w-full h-full object-cover" muted loop autoPlay />
+                  ) : (
+                    <img src={formData.backgroundUrl} alt="" className="w-full h-full object-cover" />
+                  )}
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, backgroundImage: '' })}
+                    onClick={() => setFormData({ ...formData, backgroundUrl: '', backgroundType: 'image' })}
                     className="absolute top-2 right-2 w-6 h-6 bg-background border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground"
                   >
                     <X size={14} />
                   </button>
+                  <span className="absolute bottom-2 left-2 text-[10px] bg-background px-2 py-1 uppercase">
+                    {formData.backgroundType}
+                  </span>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground mb-4">
@@ -472,17 +556,18 @@ function DropModal({
               <input
                 ref={backgroundInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/mp4"
                 onChange={handleBackgroundUpload}
                 className="hidden"
               />
               <button
                 type="button"
                 onClick={() => backgroundInputRef.current?.click()}
+                disabled={uploading}
                 className="brutalist-btn-outline text-xs flex items-center gap-2"
               >
-                <Upload size={12} />
-                upload background
+                <Video size={12} />
+                {uploading ? 'uploading...' : 'upload background'}
               </button>
             </div>
           </div>
@@ -504,7 +589,7 @@ function DropModal({
           </div>
 
           <div className="flex gap-4 pt-4">
-            <button type="submit" className="brutalist-btn flex-1">
+            <button type="submit" className="brutalist-btn flex-1" disabled={uploading}>
               {drop ? 'update drop' : 'create drop'}
             </button>
             <button
@@ -516,6 +601,219 @@ function DropModal({
             </button>
           </div>
         </form>
+
+        {/* Add Product to Drop Modal */}
+        {showAddProductModal && (
+          <DropProductModal
+            onSave={(product) => {
+              setNewProducts(prev => [...prev, product]);
+              setShowAddProductModal(false);
+            }}
+            onClose={() => setShowAddProductModal(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DropProductModal({
+  onSave,
+  onClose,
+}: {
+  onSave: (product: Omit<Product, 'id'>) => void;
+  onClose: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: '',
+    price: 0,
+    originalPrice: 0,
+    stock: 0,
+    sizes: 's, m, l, xl',
+    description: '',
+    category: 'tops' as Product['category'],
+    images: [] as string[],
+    hasFireEffect: false,
+  });
+
+  const [imageError, setImageError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData((prev) => ({
+            ...prev,
+            images: [...prev.images, reader.result as string],
+          }));
+          setImageError(false);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.images.length === 0) {
+      setImageError(true);
+      return;
+    }
+
+    const sizes = formData.sizes.split(',').map((s) => s.trim().toLowerCase());
+    
+    onSave({
+      title: formData.title,
+      price: Number(formData.price),
+      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
+      stock: Number(formData.stock),
+      sizes,
+      description: formData.description,
+      category: formData.category,
+      images: formData.images,
+      hasFireEffect: formData.hasFireEffect,
+      isNew: true,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90 p-4">
+      <div className="animate-fade-in border border-border bg-background p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xs uppercase tracking-widest">add drop product</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Images */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">images *</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {formData.images.map((img, idx) => (
+                <div key={idx} className="w-16 h-16 bg-card relative">
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full border border-dashed ${imageError ? 'border-destructive' : 'border-border'} p-3 text-center`}
+            >
+              <Upload size={14} className="mx-auto mb-1" />
+              <span className="text-xs">upload images</span>
+            </button>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">title *</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="form-input"
+              required
+            />
+          </div>
+
+          {/* Price */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">price (da) *</label>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">original price</label>
+              <input
+                type="number"
+                value={formData.originalPrice || ''}
+                onChange={(e) => setFormData({ ...formData, originalPrice: Number(e.target.value) || 0 })}
+                className="form-input"
+              />
+            </div>
+          </div>
+
+          {/* Stock & Category */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">stock *</label>
+              <input
+                type="number"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: Number(e.target.value) })}
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-widest block mb-2">category *</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as Product['category'] })}
+                className="form-select"
+              >
+                <option value="tops">tops</option>
+                <option value="bottoms">bottoms</option>
+                <option value="outerwear">outerwear</option>
+                <option value="accessories">accessories</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Sizes */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">sizes</label>
+            <input
+              type="text"
+              value={formData.sizes}
+              onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
+              className="form-input"
+              placeholder="s, m, l, xl"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-xs uppercase tracking-widest block mb-2">description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="form-input min-h-[60px] resize-none"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-2">
+            <button type="submit" className="brutalist-btn flex-1">add product</button>
+            <button type="button" onClick={onClose} className="brutalist-btn-outline flex-1">cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -524,11 +822,16 @@ function DropModal({
 function SettingsTab({
   brandLogo,
   setBrandLogo,
+  changePassword,
 }: {
   brandLogo: string | null;
   setBrandLogo: (logo: string) => void;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -541,10 +844,35 @@ function SettingsTab({
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setPasswordLoading(true);
+    const success = await changePassword(passwordData.oldPassword, passwordData.newPassword);
+    setPasswordLoading(false);
+
+    if (success) {
+      toast.success('Password changed successfully');
+      setShowChangePassword(false);
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } else {
+      toast.error('Incorrect old password');
+    }
+  };
+
   return (
-    <div className="max-w-md">
+    <div className="max-w-md space-y-6">
       <h2 className="text-xs uppercase tracking-widest mb-6">brand settings</h2>
       
+      {/* Logo Upload */}
       <div className="border border-border p-6">
         <label className="text-xs uppercase tracking-widest block mb-4">
           brand logo / icon
@@ -582,6 +910,71 @@ function SettingsTab({
         <p className="text-[10px] text-muted-foreground">
           recommended: square image, 200x200px or larger
         </p>
+      </div>
+
+      {/* Change Password */}
+      <div className="border border-border p-6">
+        <label className="text-xs uppercase tracking-widest block mb-4 flex items-center gap-2">
+          <Lock size={14} />
+          admin password
+        </label>
+
+        {showChangePassword ? (
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-2">old password</label>
+              <input
+                type="password"
+                value={passwordData.oldPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-2">new password</label>
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                className="form-input"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-2">confirm new password</label>
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                className="form-input"
+                required
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="brutalist-btn text-xs flex-1" disabled={passwordLoading}>
+                {passwordLoading ? 'saving...' : 'save password'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangePassword(false);
+                  setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                }}
+                className="brutalist-btn-outline text-xs flex-1"
+              >
+                cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="brutalist-btn-outline text-xs"
+          >
+            change password
+          </button>
+        )}
       </div>
     </div>
   );
@@ -681,22 +1074,26 @@ function OrdersTab({
 
 function ProductsTab({
   products,
-  deleteProduct,
+  onDeleteProduct,
   updateProduct,
   addProduct,
   editingProduct,
   setEditingProduct,
   showAddProduct,
   setShowAddProduct,
+  uploadMedia,
+  activeDrop,
 }: {
   products: Product[];
-  deleteProduct: (id: string) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
+  onDeleteProduct: (id: string) => void;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   editingProduct: Product | null;
   setEditingProduct: (product: Product | null) => void;
   showAddProduct: boolean;
   setShowAddProduct: (show: boolean) => void;
+  uploadMedia: (file: File, folder?: string) => Promise<string | null>;
+  activeDrop: (Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' }) | null;
 }) {
   return (
     <div>
@@ -721,6 +1118,7 @@ function ProductsTab({
               <th>original price</th>
               <th>stock</th>
               <th>sizes</th>
+              <th>status</th>
               <th>actions</th>
             </tr>
           </thead>
@@ -746,6 +1144,15 @@ function ProductsTab({
                 <td>{product.stock}</td>
                 <td>{product.sizes.join(', ')}</td>
                 <td>
+                  {product.dropId && activeDrop?.id === product.dropId ? (
+                    <span className="text-xs text-muted-foreground">hidden (drop)</span>
+                  ) : product.isNew ? (
+                    <span className="text-xs uppercase">new</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">visible</span>
+                  )}
+                </td>
+                <td>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setEditingProduct(product)}
@@ -754,7 +1161,7 @@ function ProductsTab({
                       <Edit2 size={12} />
                     </button>
                     <button
-                      onClick={() => deleteProduct(product.id)}
+                      onClick={() => onDeleteProduct(product.id)}
                       className="p-2 border border-border hover:bg-destructive hover:text-destructive-foreground"
                     >
                       <Trash2 size={12} />
@@ -771,22 +1178,24 @@ function ProductsTab({
       {editingProduct && (
         <ProductModal
           product={editingProduct}
-          onSave={(updates) => {
-            updateProduct(editingProduct.id, updates);
+          onSave={async (updates) => {
+            await updateProduct(editingProduct.id, updates);
             setEditingProduct(null);
           }}
           onClose={() => setEditingProduct(null)}
+          uploadMedia={uploadMedia}
         />
       )}
 
       {/* Add Modal */}
       {showAddProduct && (
         <ProductModal
-          onSave={(newProduct) => {
-            addProduct(newProduct as Omit<Product, 'id'>);
+          onSave={async (newProduct) => {
+            await addProduct(newProduct as Omit<Product, 'id'>);
             setShowAddProduct(false);
           }}
           onClose={() => setShowAddProduct(false)}
+          uploadMedia={uploadMedia}
         />
       )}
     </div>
@@ -797,10 +1206,12 @@ function ProductModal({
   product,
   onSave,
   onClose,
+  uploadMedia,
 }: {
   product?: Product;
-  onSave: (data: Partial<Product> | Omit<Product, 'id'>) => void;
+  onSave: (data: Partial<Product> | Omit<Product, 'id'>) => Promise<void>;
   onClose: () => void;
+  uploadMedia: (file: File, folder?: string) => Promise<string | null>;
 }) {
   const [formData, setFormData] = useState({
     title: product?.title || '',
@@ -816,22 +1227,24 @@ function ProductModal({
   
   const [imageError, setImageError] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
+      setUploading(true);
+      for (const file of Array.from(files)) {
+        const url = await uploadMedia(file, 'products');
+        if (url) {
           setFormData((prev) => ({
             ...prev,
-            images: [...prev.images, reader.result as string],
+            images: [...prev.images, url],
           }));
           setImageError(false);
-        };
-        reader.readAsDataURL(file);
-      });
+        }
+      }
+      setUploading(false);
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -866,7 +1279,7 @@ function ProductModal({
     setDraggedIndex(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (formData.images.length === 0) {
@@ -876,7 +1289,7 @@ function ProductModal({
     
     const sizes = formData.sizes.split(',').map((s) => s.trim().toLowerCase());
     
-    onSave({
+    await onSave({
       title: formData.title,
       price: Number(formData.price),
       originalPrice: formData.originalPrice ? Number(formData.originalPrice) : undefined,
@@ -960,13 +1373,14 @@ function ProductModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
               className={`w-full border border-dashed ${
                 imageError ? 'border-destructive' : 'border-border'
               } p-4 text-center hover:bg-secondary transition-colors`}
             >
               <Upload size={16} className="mx-auto mb-2" />
               <span className="text-xs uppercase tracking-widest">
-                upload images
+                {uploading ? 'uploading...' : 'upload images'}
               </span>
             </button>
             {imageError && (
@@ -1106,7 +1520,7 @@ function ProductModal({
           </div>
 
           <div className="flex gap-4 pt-4">
-            <button type="submit" className="brutalist-btn flex-1">
+            <button type="submit" className="brutalist-btn flex-1" disabled={uploading}>
               {product ? 'update' : 'add product'}
             </button>
             <button
