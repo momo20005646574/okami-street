@@ -9,37 +9,47 @@ import { Drop } from '@/types/store';
 import okamiLogo from '@/assets/okami-logo.png';
 
 interface DropPageProps {
-  drop: Drop;
+  drop: Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' };
   onDropComplete: () => void;
 }
 
 const DropPage = ({ drop, onDropComplete }: DropPageProps) => {
-  const { products, brandLogo } = useStore();
+  const { products, brandLogo, getVisibleProducts } = useStore();
   const [showLookbook, setShowLookbook] = useState(false);
   const [showPreviousProducts, setShowPreviousProducts] = useState(false);
 
   const logoSrc = brandLogo || okamiLogo;
 
   // Get previous drop products (products not assigned to current drop)
-  const previousProducts = products.filter(
-    (p) => !drop.productIds.includes(p.id)
+  const previousProducts = getVisibleProducts().filter(
+    (p) => p.dropId !== drop.id
   );
 
-  const backgroundStyle = drop.backgroundImage
-    ? {
-        backgroundImage: `url(${drop.backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {};
+  const backgroundUrl = drop.backgroundUrl || drop.backgroundImage;
+  const backgroundType = drop.backgroundType || 'image';
 
   return (
-    <div
-      className="min-h-screen bg-background relative"
-      style={backgroundStyle}
-    >
-      {drop.backgroundImage && (
-        <div className="absolute inset-0 bg-background/70" />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background Media */}
+      {backgroundUrl && (
+        <>
+          {backgroundType === 'video' ? (
+            <video
+              src={backgroundUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${backgroundUrl})` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-background/70" />
+        </>
       )}
 
       <div className="relative z-10">

@@ -43,9 +43,9 @@ export function CartPanel() {
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <img
-                  src="https://media.tenor.com/OVxmSXv-lzIAAAAi/cat-neko.gif"
+                  src="https://tenor.com/doQlcpIwWqK.gif"
                   alt="empty cart"
-                  className="w-72 h-72 object-contain mb-6 opacity-90 grayscale"
+                  className="w-80 h-80 object-contain mb-6"
                 />
                 <p className="text-base text-muted-foreground mb-2">
                   your cart is lonely
