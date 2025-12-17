@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     const adminToken = authHeader?.replace('Bearer ', '') || null
 
     // Actions that don't require authentication
-    const publicActions = ['verify_password', 'submit_order']
+    const publicActions = ['verify_password', 'submit_order', 'verify_token']
     
     // Check authentication for protected actions
     if (!publicActions.includes(action) && !isValidAdminToken(adminToken)) {
@@ -168,8 +168,9 @@ Deno.serve(async (req) => {
       }
 
       case 'verify_token': {
-        // Just verify the token is valid (already checked above)
-        return new Response(JSON.stringify({ valid: true }), {
+        // Check if the provided token is valid
+        const valid = isValidAdminToken(adminToken)
+        return new Response(JSON.stringify({ valid }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
