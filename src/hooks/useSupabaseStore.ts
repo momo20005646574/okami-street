@@ -471,6 +471,11 @@ export function useSupabaseStore() {
     }
   };
 
+  // Refresh functions for external use
+  const refreshProducts = fetchProducts;
+  const refreshDrops = fetchDrops;
+  const refreshOrders = fetchOrders;
+
   // Visibility logic
   const getVisibleProducts = useCallback(() => {
     if (!activeDrop || !activeDrop.isActive) {
@@ -565,6 +570,9 @@ export function useSupabaseStore() {
     createDrop,
     updateDrop,
     cancelDrop,
+    refreshProducts,
+    refreshDrops,
+    refreshOrders,
     completeDrop,
     uploadMedia,
   };
