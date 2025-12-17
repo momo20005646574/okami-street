@@ -118,8 +118,8 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('authorization')
     const adminToken = authHeader?.replace('Bearer ', '') || null
 
-    // Actions that don't require authentication
-    const publicActions = ['verify_password', 'submit_order', 'verify_token']
+    // Actions that don't require token authentication (they have their own auth)
+    const publicActions = ['verify_password', 'submit_order', 'verify_token', 'change_password']
     
     // Check authentication for protected actions
     if (!publicActions.includes(action) && !isValidAdminToken(adminToken)) {
