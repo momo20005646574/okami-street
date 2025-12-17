@@ -1,7 +1,7 @@
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/context/StoreContext';
-import emptyCartImage from '@/assets/empty-cart.png';
+import emptyCartGif from '@/assets/empty-cart.gif';
 
 export function CartPanel() {
   const {
@@ -43,7 +43,7 @@ export function CartPanel() {
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <img
-                  src="https://tenor.com/doQlcpIwWqK.gif"
+                  src={emptyCartGif}
                   alt="empty cart"
                   className="w-80 h-80 object-contain mb-6"
                 />
