@@ -61,19 +61,40 @@ async function generateAdminToken(): Promise<string> {
   return token
 }
 
-// Token storage (in-memory for edge function - tokens expire on function restart)
-// In production, consider using a database table for persistent sessions
-const adminTokens = new Map<string, { expires: number }>()
-
-function isValidAdminToken(token: string | null): boolean {
+// Database-backed token validation
+// deno-lint-ignore no-explicit-any
+async function isValidAdminToken(supabase: any, token: string | null): Promise<boolean> {
   if (!token) return false
-  const session = adminTokens.get(token)
-  if (!session) return false
-  if (Date.now() > session.expires) {
-    adminTokens.delete(token)
-    return false
-  }
+  
+  const { data, error } = await supabase
+    .from('admin_sessions')
+    .select('id')
+    .eq('token', token)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle()
+  
+  if (error || !data) return false
   return true
+}
+
+// Store token in database
+// deno-lint-ignore no-explicit-any
+async function storeAdminToken(supabase: any, token: string): Promise<void> {
+  // Token expires in 24 hours
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  
+  await supabase
+    .from('admin_sessions')
+    .insert({ token, expires_at: expiresAt })
+}
+
+// Remove token from database
+// deno-lint-ignore no-explicit-any
+async function removeAdminToken(supabase: any, token: string): Promise<void> {
+  await supabase
+    .from('admin_sessions')
+    .delete()
+    .eq('token', token)
 }
 
 // Valid Algerian wilayas
@@ -122,7 +143,7 @@ Deno.serve(async (req) => {
     const publicActions = ['verify_password', 'submit_order', 'verify_token', 'change_password']
     
     // Check authentication for protected actions
-    if (!publicActions.includes(action) && !isValidAdminToken(adminToken)) {
+    if (!publicActions.includes(action) && !(await isValidAdminToken(supabase, adminToken))) {
       console.log(`Unauthorized access attempt for action: ${action}`)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -151,10 +172,9 @@ Deno.serve(async (req) => {
         const isValid = await verifyPassword(password, settings.password_hash)
         
         if (isValid) {
-          // Generate admin token
+          // Generate admin token and store in database
           const token = await generateAdminToken()
-          // Token expires in 24 hours
-          adminTokens.set(token, { expires: Date.now() + 24 * 60 * 60 * 1000 })
+          await storeAdminToken(supabase, token)
           
           console.log('Admin login successful')
           return new Response(JSON.stringify({ success: true, token }), {
@@ -169,7 +189,7 @@ Deno.serve(async (req) => {
 
       case 'verify_token': {
         // Check if the provided token is valid
-        const valid = isValidAdminToken(adminToken)
+        const valid = await isValidAdminToken(supabase, adminToken)
         return new Response(JSON.stringify({ valid }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
@@ -177,7 +197,7 @@ Deno.serve(async (req) => {
 
       case 'logout': {
         if (adminToken) {
-          adminTokens.delete(adminToken)
+          await removeAdminToken(supabase, adminToken)
         }
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
