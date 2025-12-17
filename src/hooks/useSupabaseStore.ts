@@ -147,8 +147,13 @@ export function useSupabaseStore() {
       const token = getAdminToken();
       if (token) {
         try {
-          await callAdminFunction('verify_token', {}, true);
-          setIsAdmin(true);
+          const result = await callAdminFunction('verify_token', {}, true);
+          if (result?.valid) {
+            setIsAdmin(true);
+          } else {
+            setAdminToken(null);
+            setIsAdmin(false);
+          }
         } catch {
           // Token invalid or expired
           setAdminToken(null);
