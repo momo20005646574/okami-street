@@ -92,9 +92,34 @@ function mapDbToOrder(db: DbOrder): Order {
   };
 }
 
-async function callAdminFunction(action: string, data?: Record<string, unknown>) {
+// Secure admin token storage
+const ADMIN_TOKEN_KEY = 'okami-admin-token';
+
+function getAdminToken(): string | null {
+  return sessionStorage.getItem(ADMIN_TOKEN_KEY);
+}
+
+function setAdminToken(token: string | null): void {
+  if (token) {
+    sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  }
+}
+
+async function callAdminFunction(action: string, data?: Record<string, unknown>, requiresAuth = true) {
+  const headers: Record<string, string> = {};
+  
+  if (requiresAuth) {
+    const token = getAdminToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  
   const response = await supabase.functions.invoke('admin', {
     body: { action, data },
+    headers,
   });
   
   if (response.error) throw response.error;
@@ -105,9 +130,7 @@ export function useSupabaseStore() {
   const [products, setProducts] = useState<Product[]>([]);
   const [drops, setDrops] = useState<(Drop & { backgroundUrl?: string; backgroundType?: 'image' | 'gif' | 'video' })[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isAdmin, setIsAdmin] = useState(() => {
-    return localStorage.getItem('okami-admin') === 'true';
-  });
+  const [isAdmin, setIsAdmin] = useState(false);
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('okami-cart');
     return saved ? JSON.parse(saved) : [];
@@ -118,10 +141,32 @@ export function useSupabaseStore() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Verify admin token on mount
+  useEffect(() => {
+    const verifyToken = async () => {
+      const token = getAdminToken();
+      if (token) {
+        try {
+          await callAdminFunction('verify_token', {}, true);
+          setIsAdmin(true);
+        } catch {
+          // Token invalid or expired
+          setAdminToken(null);
+          setIsAdmin(false);
+        }
+      }
+    };
+    verifyToken();
+  }, []);
+
   // Fetch initial data
   useEffect(() => {
     fetchProducts();
     fetchDrops();
+  }, []);
+
+  // Fetch orders when admin status changes
+  useEffect(() => {
     if (isAdmin) {
       fetchOrders();
     }
@@ -131,11 +176,6 @@ export function useSupabaseStore() {
   useEffect(() => {
     localStorage.setItem('okami-cart', JSON.stringify(cart));
   }, [cart]);
-
-  // Persist admin status
-  useEffect(() => {
-    localStorage.setItem('okami-admin', isAdmin.toString());
-  }, [isAdmin]);
 
   // Persist brand logo
   useEffect(() => {
@@ -199,8 +239,9 @@ export function useSupabaseStore() {
   // Auth functions
   const loginAdmin = async (password: string): Promise<boolean> => {
     try {
-      const result = await callAdminFunction('verify_password', { password });
-      if (result.success) {
+      const result = await callAdminFunction('verify_password', { password }, false);
+      if (result.success && result.token) {
+        setAdminToken(result.token);
         setIsAdmin(true);
         fetchOrders();
         return true;
@@ -212,7 +253,13 @@ export function useSupabaseStore() {
     }
   };
 
-  const logoutAdmin = () => {
+  const logoutAdmin = async () => {
+    try {
+      await callAdminFunction('logout', {}, true);
+    } catch {
+      // Ignore logout errors
+    }
+    setAdminToken(null);
     setIsAdmin(false);
   };
 
@@ -275,7 +322,7 @@ export function useSupabaseStore() {
     );
   };
 
-  // Product functions
+  // Product functions (admin only)
   const addProduct = async (product: Omit<Product, 'id'>) => {
     try {
       const result = await callAdminFunction('add_product', { product });
@@ -382,26 +429,26 @@ export function useSupabaseStore() {
     }
   };
 
-  // Order functions
+  // Order functions - now uses server-side validation
   const addOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'status'>) => {
     try {
-      const orderData = {
-        customer_name: order.customerName,
+      const result = await callAdminFunction('submit_order', {
+        customerName: order.customerName,
         phone: order.phone,
         wilaya: order.wilaya,
-        delivery_type: order.deliveryType,
-        items: order.items as unknown as Record<string, unknown>,
-        total: order.total,
-      };
+        deliveryType: order.deliveryType,
+        items: order.items,
+        total: order.total
+      }, false);
       
-      const { error } = await supabase
-        .from('orders')
-        .insert(orderData as never);
-      
-      if (error) throw error;
-      clearCart();
-      toast.success('Order placed successfully');
-      return true;
+      if (result.success) {
+        clearCart();
+        toast.success('Order placed successfully');
+        return true;
+      } else {
+        toast.error(result.error || 'Failed to place order');
+        return false;
+      }
     } catch (error) {
       console.error('Error placing order:', error);
       toast.error('Failed to place order');
@@ -447,20 +494,40 @@ export function useSupabaseStore() {
     return products.filter(p => p.dropId === dropId);
   }, [products]);
 
-  // Upload media file
+  // Upload media file - now uses signed URLs for admin uploads
   const uploadMedia = async (file: File, folder: string = 'products'): Promise<string | null> => {
+    if (!isAdmin) {
+      toast.error('Unauthorized');
+      return null;
+    }
+    
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Get signed upload URL from admin function
+      const result = await callAdminFunction('upload_media', {
+        fileName: file.name,
+        contentType: file.type,
+      });
       
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(fileName, file);
+      if (result.signedUrl) {
+        // Upload using signed URL
+        const uploadResponse = await fetch(result.signedUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type,
+          },
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Upload failed');
+        }
+        
+        // Get public URL
+        const { data } = supabase.storage.from('media').getPublicUrl(result.path);
+        return data.publicUrl;
+      }
       
-      if (uploadError) throw uploadError;
-      
-      const { data } = supabase.storage.from('media').getPublicUrl(fileName);
-      return data.publicUrl;
+      return null;
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error('Failed to upload file');
@@ -500,8 +567,5 @@ export function useSupabaseStore() {
     cancelDrop,
     completeDrop,
     uploadMedia,
-    refreshProducts: fetchProducts,
-    refreshDrops: fetchDrops,
-    refreshOrders: fetchOrders,
   };
 }
