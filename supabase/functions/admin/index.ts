@@ -1,5 +1,53 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts"
+import { encode as hexEncode } from "https://deno.land/std@0.208.0/encoding/hex.ts"
+
+// Use Web Crypto API for password hashing (compatible with Deno Deploy)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const passwordData = encoder.encode(password)
+  
+  // Combine salt and password
+  const combined = new Uint8Array(salt.length + passwordData.length)
+  combined.set(salt)
+  combined.set(passwordData, salt.length)
+  
+  // Hash using SHA-256
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined)
+  const hashArray = new Uint8Array(hashBuffer)
+  
+  // Return salt:hash format
+  const saltHex = new TextDecoder().decode(hexEncode(salt))
+  const hashHex = new TextDecoder().decode(hexEncode(hashArray))
+  return `${saltHex}:${hashHex}`
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const encoder = new TextEncoder()
+  
+  // Handle legacy plain text passwords (for migration)
+  if (!storedHash.includes(':')) {
+    return password === storedHash
+  }
+  
+  const [saltHex, expectedHashHex] = storedHash.split(':')
+  
+  // Decode salt from hex
+  const saltBytes = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
+  const passwordData = encoder.encode(password)
+  
+  // Combine salt and password
+  const combined = new Uint8Array(saltBytes.length + passwordData.length)
+  combined.set(saltBytes)
+  combined.set(passwordData, saltBytes.length)
+  
+  // Hash and compare
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined)
+  const hashArray = new Uint8Array(hashBuffer)
+  const hashHex = new TextDecoder().decode(hexEncode(hashArray))
+  
+  return hashHex === expectedHashHex
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +147,8 @@ Deno.serve(async (req) => {
         
         if (error) throw error
         
-        // Use bcrypt to compare password
-        const isValid = await bcrypt.compare(password, settings.password_hash)
+        // Use verifyPassword to compare password
+        const isValid = await verifyPassword(password, settings.password_hash)
         
         if (isValid) {
           // Generate admin token
@@ -158,7 +206,7 @@ Deno.serve(async (req) => {
         
         if (fetchError) throw fetchError
         
-        const oldPasswordValid = await bcrypt.compare(oldPassword, settings.password_hash)
+        const oldPasswordValid = await verifyPassword(oldPassword, settings.password_hash)
         if (!oldPasswordValid) {
           return new Response(JSON.stringify({ success: false, error: 'Incorrect old password' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -166,7 +214,7 @@ Deno.serve(async (req) => {
         }
         
         // Hash new password and update
-        const newHash = await bcrypt.hash(newPassword)
+        const newHash = await hashPassword(newPassword)
         const { error: updateError } = await supabase
           .from('admin_settings')
           .update({ password_hash: newHash })
