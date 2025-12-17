@@ -32,7 +32,7 @@ const Shop = () => {
       <footer className="border-t border-border py-8">
         <div className="container px-4 text-center">
           <p className="text-xs text-muted-foreground">
-            © 2024 okami streetwear · algiers, algeria
+            © 2024 kanja.sd streetwear · algiers, algeria
           </p>
         </div>
       </footer>

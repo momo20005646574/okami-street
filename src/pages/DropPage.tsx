@@ -63,14 +63,14 @@ const DropPage = ({ drop, onDropComplete }: DropPageProps) => {
               <div className="inline-block border border-border p-4 bg-background">
                 <img
                   src={logoSrc}
-                  alt="okami"
+                  alt="kanja.sd"
                   className="h-20 w-20 object-contain"
                 />
               </div>
             </div>
 
             {/* Brand Name */}
-            <h1 className="text-lg uppercase tracking-[0.3em] mb-8">okami</h1>
+            <h1 className="text-lg uppercase tracking-[0.3em] mb-8">kanja.sd</h1>
 
             {/* Drop Name */}
             <p className="text-xs uppercase tracking-widest text-muted-foreground mb-6">
