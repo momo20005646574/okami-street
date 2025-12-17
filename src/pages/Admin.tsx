@@ -54,7 +54,7 @@ const Admin = () => {
       <header className="border-b border-border">
         <div className="container px-4 py-4 flex items-center justify-between">
           <Link to="/" className="text-xs uppercase tracking-widest">
-            okami admin
+            kanja.sd admin
           </Link>
           <button
             onClick={logoutAdmin}
